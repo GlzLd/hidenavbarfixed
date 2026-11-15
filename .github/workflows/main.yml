@@ -19,6 +19,11 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+      - name: Disable local proxy for CI
+        run: |
+          sed -i '/^systemProp\.socksProxyHost=/d' NavHideModule/gradle.properties
+          sed -i '/^systemProp\.socksProxyPort=/d' NavHideModule/gradle.properties
+    
       - name: Checkout
         uses: actions/checkout@v5
 
