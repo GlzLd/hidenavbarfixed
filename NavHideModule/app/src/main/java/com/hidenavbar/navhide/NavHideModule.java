@@ -118,27 +118,36 @@ public class NavHideModule extends XposedModule {
             Log.i(TAG, "[H6] setFrame method found: " + setFrame);
 
             hook(setFrame)
-                    .setExceptionMode(ExceptionMode.PROTECTIVE)
-                    .intercept(chain -> {
-                        try {
-                            int type = (int) getType.invoke(chain.getThisObject());
-                            // 只处理 TYPE_NAVIGATION_BARS (2)，不碰其他类型
-                            if (type == TYPE_NAVIGATION_BARS) {
-                                Rect originalRect = (Rect) chain.getArg(0);
-                                if (originalRect != null && originalRect.height() > 0) {
-                                    int oldH = originalRect.height();
-                                    // 创建空 rect 让导航栏 inset 归零
-                                    Rect fakeRect = new Rect(originalRect);
-                                    fakeRect.top = fakeRect.bottom;  // height = 0
-                                    Log.i(TAG, "[H6] NAV_BAR setFrame: height " + oldH + " -> 0");
-                                    return chain.proceedWith(chain.getThisObject(), new Object[]{fakeRect});
-                                }
-                            }
-                        } catch (Throwable t) {
-                            Log.e(TAG, "[H6] setFrame intercept error: " + t);
-                        }
-                        return chain.proceed();
-                    });
+        .setExceptionMode(ExceptionMode.PROTECTIVE)
+        .intercept(chain -> {
+            try {
+                int type = (int) getType.invoke(chain.getThisObject());
+
+                // 只处理导航栏，不修改状态栏、手势区域和 IME
+                if (type == TYPE_NAVIGATION_BARS) {
+                    Rect originalRect = (Rect) chain.getArg(0);
+
+                    if (originalRect != null && !originalRect.isEmpty()) {
+                        Rect emptyRect = new Rect();
+                        emptyRect.setEmpty();
+
+                        Log.i(TAG,
+                                "[H6] NAV_BAR setFrame: "
+                                + originalRect.toShortString()
+                                + " -> EMPTY");
+
+                        return chain.proceedWith(
+                                chain.getThisObject(),
+                                new Object[]{emptyRect}
+                        );
+                    }
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "[H6] setFrame intercept error: " + t);
+            }
+
+            return chain.proceed();
+        });
             Log.i(TAG, "[H6] InsetsSource.setFrame hook installed OK");
         } catch (Throwable e) {
             Log.e(TAG, "[H6] InsetsSource.setFrame FAILED: " + e);
